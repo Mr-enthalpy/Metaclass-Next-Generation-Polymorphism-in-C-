@@ -19,6 +19,11 @@ MetaClass is a cutting-edge C++ framework aiming to redefine polymorphism within
 
 ## Getting Started
 
+Use the header file "Metaclass.h" after including the project：
+```cpp
+#include "Metaclass.h"
+```
+
 ### Defining Interfaces and Classes
 
 1. **Define an Interface** using the `Interface` macro:
@@ -27,23 +32,26 @@ MetaClass is a cutting-edge C++ framework aiming to redefine polymorphism within
     Interface(Add,
         Fn((string, string), string),
         Fn((int, int), int)
-    ); //The maximum number of overload sets that can be accepted for an interface is 1024
+    ); 
 
     Interface(read,
-        ((), void), //The maximum number of metatypes contained in a metaclass is 1024.
+        ((), void), 
     );
     ```
-
++ The first parameter defines the name of the interface.
 + All parameters, starting with the second parameter of the macro, make up the overload set of the interface.
-+ The two parameters in each parameter correspond to the types of input and output parameters
-+ Fn is not mandatory and can be defaulted
++ The two parameters in each parameter correspond to the types of input and output parameters.
++ Fn is not mandatory and can be defaulted。
++ Due to the limitations of the macro recursion stack, the maximum size of the overload set for a single interface is 1024.
 
-2. **Create a MetaClass** with the defined interfaces:
+2. **Create a MetaClass** using the `Metaclass` macro::
 
     ```cpp
     Metaclass(Myclass, Add, read);
     ```
-
++ The first parameter defines the name of the Metaclass.
++ The parameters starting with the second parameter define the set of interfaces that the metaclass contains.
++ Due to the limitations of the macro recursion stack, the maximum size of the interface set for a single metaclass is 1024.
 ### Implementing and Using MetaClasses
 
 1. **Implement your class** with the required methods:
@@ -56,7 +64,7 @@ MetaClass is a cutting-edge C++ framework aiming to redefine polymorphism within
         void read() { std::cout << "read" << std::endl; }
     };
     ```
-
+    
 2. **Instantiate and use** your MetaClass:
 
     ```cpp
@@ -67,14 +75,13 @@ MetaClass is a cutting-edge C++ framework aiming to redefine polymorphism within
     std::cout << metaObject.Add(2, 3) << std::endl;
     metaObject.read();
     ```
-
++ Since a metaclass is just an observer of the data, it can only be constructed from lvalues.
 3. **Type-Safe Downcasting**:
 
     ```cpp
     auto originalObject = Any_cast<MyClassImpl>(metaObject); // Safe
     auto wrongCast = Any_cast<OtherType>(metaObject); // Compilation error
     ```
-
 ## Contributing
 
 Contributions to MetaClass are welcome! Whether it's through submitting bug reports, writing documentation, or contributing code, we value your input and support.
