@@ -7,10 +7,14 @@ MetaClass is a cutting-edge C++ framework aiming to redefine polymorphism within
 ## Key Features
 
 - **Non-intrusive Design**: Enables polymorphic behavior without altering object design.
-- **Enhanced Performance**: Optimizes polymorphic calls to be as close to native language performance as possible.
 - **Ease of Use**: Simplifies the declaration and usage of polymorphic classes through macros and template metaprogramming.
 - **Type-Safe Downcasting**: Allows for safe retrieval of the original object with complete type safety.
-- **Reference Semantics Only**： MetaClass inherently adopts reference semantics, viewing it just as an observer, can only be constructed from lvalues.
+- **Reference Semantics Only**： MetaClass inherently adopts reference semantics, viewing it just as an observer, separating annoying lifecycle management from dynamic polymorphism.
+- **Seamless Interaction with the C++ Type System**: MetaClass is designed to work harmoniously with the C++ type system, providing a smooth integration that leverages the full capabilities of the First-order Type.
+- **Intuitive Object.Method(...) Calling Convention**: A standout feature of MetaClass is its support for the Object.Method(args...) calling style, Perfectly imitating the syntax and feel of virtual function-based polymorphism. The ability to use the familiar Object.Method(...) syntax enhances readability and usability, making MetaClass a more natural fit for C++ developers.
+- **Performance Comparable to Static Polymorphism**: MetaClass approaches the performance of static polymorphism solutions like CRTP combined with std::variant, offering a dynamic polymorphism solution without the typical overhead associated with virtual functions.
+- **Transparent Memory Layout**: The design of MetaClass ensures that the memory layout of polymorphic objects is transparent and predictable, aiding in optimization and understanding of how objects are stored and accessed in memory.
+
 
 ## Requirements
 
