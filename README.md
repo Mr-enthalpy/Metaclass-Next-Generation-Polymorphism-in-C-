@@ -28,7 +28,7 @@ Use the header file "Metaclass.h" after including the project：
 #include "Metaclass.h"
 ```
 
-### Defining Interfaces and Classes
+### Defining Interfaces and Metalasses
 
 1. **Define an Interface** using the `Interface` macro:
 
