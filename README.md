@@ -79,8 +79,8 @@ Use the header file "Metaclass.h" after including the project：
 3. **Type-Safe Downcasting**:
 
     ```cpp
-    auto originalObject = Any_cast<MyClassImpl>(metaObject); // Safe
-    auto wrongCast = Any_cast<OtherType>(metaObject); // Compilation error
+    auto& originalObject = Any_cast<MyClassImpl>(metaObject); // Safe
+    auto& wrongCast = Any_cast<OtherType>(metaObject); // Compilation error
     ```
 ## Contributing
 
