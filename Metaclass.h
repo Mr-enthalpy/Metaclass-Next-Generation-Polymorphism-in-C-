@@ -1,4 +1,6 @@
 #include "For_marco.h"
+#include <type_traits>
+#include <tuple>
 import ANY;
 
 #define List_push_back(x, ...) CAT(List_pusk_back_, IS_EMPTY(__VA_ARGS__)) (x, __VA_ARGS__)
@@ -6,7 +8,7 @@ import ANY;
 #define List_pusk_back_1(x, ...) Impl x
 
 #define Expand(...) __VA_ARGS__
-// �����꣬����ǿ�Ʋ���չ��
+// 辅助宏，用于强制参数展开
 #define F_Declare_Impl(name, type_in, type_out) \
     using CAT(name, _type) = type_out(List_push_back((Any&), Expand type_in)); \
     CAT(name, _type)* name = nullptr;
@@ -19,15 +21,15 @@ import ANY;
 #define	Gener_Fun_Name(X) (CAT(F_,__COUNTER__), Impl X)
 
 #define F_Overload_0_Impl(name, type_in, type_out) \
-	if constexpr( requires{ std::same_as<decltype(name(*this, std::forward<decltype(args)>(args)...)), type_out>;  } ) \
+	if constexpr(requires{ name(*this, std::forward<Args>(args)...); } && std::same_as<transform_tuple_t<std::tuple<Impl type_in>>, std::tuple<std::remove_cvref_t<Args>...>>) \
 	{ \
-		return name(*this, std::forward<decltype(args)>(args)...); \
+		return name(*this, std::forward<Args>(args)...); \
 	}
 #define F_Overload_0(args) Impl(F_Overload_0_Impl args)
 #define F_Overload_1_Impl(name, type_in, type_out) \
-	else if constexpr( requires{ std::same_as<decltype(name(*this, std::forward<decltype(args)>(args)...)), type_out>;  } ) \
+	else if constexpr(requires{ name(*this, std::forward<Args>(args)...); } && std::same_as<transform_tuple_t<std::tuple<Impl type_in>>, std::tuple<std::remove_cvref_t<Args>...>>) \
 	{ \
-		return name(*this, std::forward<decltype(args)>(args)...); \
+		return name(*this, std::forward<Args>(args)...); \
 	}
 #define F_Overload_1(args) Impl(F_Overload_1_Impl args)
 #define Overload_0(x, ...) F_Overload_0(x) FOREACH_NO_INTERVAL(F_Overload_1, __VA_ARGS__)
@@ -52,7 +54,8 @@ namespace Interface_detail \
 		Interface_##Fun_name(T& x) : Any(x), FOREACH(F_Init, __VA_ARGS__) {} \
 		Interface_##Fun_name(const Interface_##Fun_name& other) = default; \
 		Interface_##Fun_name& operator=(const Interface_##Fun_name& other) = default; \
-		auto Fun_name(auto&& ...args) \
+		template <typename ...Args> \
+		auto Fun_name(Args&& ...args) \
 		{ \
 			Overload(__VA_ARGS__) \
 		} \
@@ -75,3 +78,24 @@ struct class_name final: FOREACH(Inter_name, __VA_ARGS__) \
 };
 
 #define Fn(X,Y) (X, Y)
+
+// 定义transform_tuple，用于处理std::tuple
+template<typename Tuple>
+struct transform_tuple;
+
+// 部分特化，用于非空的std::tuple
+template<typename... Args>
+struct transform_tuple<std::tuple<Args...>> 
+{
+	using type = std::tuple<std::remove_cvref_t<Args>...>;
+};
+
+// 完全特化，用于空的std::tuple
+template<>
+struct transform_tuple<std::tuple<>> 
+{
+	using type = std::tuple<>;
+};
+
+template<typename Tuple>
+using transform_tuple_t = typename transform_tuple<Tuple>::type;
