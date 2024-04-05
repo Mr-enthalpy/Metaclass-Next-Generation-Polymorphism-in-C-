@@ -21,34 +21,41 @@ import ANY;
 #define	Gener_Fun_Name(X) (CAT(F_,__COUNTER__), Impl X)
 
 #define F_Overload_0_Impl(name, type_in, type_out) \
-	if constexpr(requires{ name(*this, std::forward<Args>(args)...); } && std::same_as<transform_tuple_t<std::tuple<Impl type_in>, remove_const_keep_ref>, std::tuple<remove_const_keep_ref_t<Args>...>>) \
+	if constexpr(requires{ name(*this, std::forward<Args>(args)...); } && std::same_as<transform_tuple_t<std::tuple<Impl type_in>>, std::tuple<Args...>>) \
 	{ \
 		return name(*this, std::forward<Args>(args)...); \
 	}
 #define F_Overload_0(args) Impl(F_Overload_0_Impl args)
 #define F_Overload_1_Impl(name, type_in, type_out) \
-	else if constexpr(requires{ name(*this, std::forward<Args>(args)...); } && std::same_as<transform_tuple_t<std::tuple<Impl type_in>, remove_const_keep_ref>, std::tuple<remove_const_keep_ref<Args>...>>) \
+	else if constexpr(requires{ name(*this, std::forward<Args>(args)...); } && std::same_as<transform_tuple_t<std::tuple<Impl type_in>>, std::tuple<Args...>>) \
 	{ \
 		return name(*this, std::forward<Args>(args)...); \
 	}
 #define F_Overload_1(args) Impl(F_Overload_1_Impl args)
 #define Overload_0(x, ...) F_Overload_0(x) FOREACH_NO_INTERVAL(F_Overload_1, __VA_ARGS__)
 #define Overload_1(x, ...) F_Overload_0(x) 
-#define Overload(x, ...) CAT(Overload_, IS_EMPTY(__VA_ARGS__)) (x, __VA_ARGS__) //第一轮重载匹配，保证左右值
+#define Overload(x, ...) CAT(Overload_, IS_EMPTY(__VA_ARGS__)) (x, __VA_ARGS__) //第一轮重载匹配，要求参数类型完全匹配
 
 #define Overload_S_Impl(name, typein, typeout) \
+	else if constexpr(requires{ name(*this, std::forward<Args>(args)...); } && std::same_as<transform_tuple_t<std::tuple<Impl typein>, remove_const_keep_ref>, std::tuple<remove_const_keep_ref_t<Args>...>>) \
+	{ \
+		return name(*this, std::forward<Args>(args)...); \
+	}
+#define Overload_S(args) Impl(Overload_S_Impl args) //第三轮重载匹配，放松条件至允许常量绑定到变量
+
+#define Overload_T_Impl(name, typein, typeout) \
 	else if constexpr(requires{ name(*this, std::forward<Args>(args)...); } && std::same_as<transform_tuple_t<std::tuple<Impl typein>, std::remove_cvref>, std::tuple<std::remove_cvref_t<Args>...>>) \
 	{ \
 		return name(*this, std::forward<Args>(args)...); \
 	}
-#define Overload_S(args) Impl(Overload_S_Impl args) //第二轮重载匹配，保证无类型转换
+#define Overload_T(args) Impl(Overload_T_Impl args) //第三轮重载匹配，继续放松条件至允许T&&和T转发至T
 
-#define Overload_T_Impl(name, typein, typeout) \
+#define Overload_F_Impl(name, typein, typeout) \
 	else if constexpr(requires{ name(*this, std::forward<Args>(args)...); }) \
 	{ \
 		return name(*this, std::forward<Args>(args)...); \
 	}
-#define Overload_T(args) Impl(Overload_T_Impl args) //第三轮重载匹配，允许类型转换
+#define Overload_F(args) Impl(Overload_F_Impl args) //第四轮重载匹配，继续放松条件至允许隐式类型转换
 
 #define Interface_Impl(Fun_name, ...) \
 namespace Interface_detail \
@@ -74,6 +81,7 @@ namespace Interface_detail \
 			Overload(__VA_ARGS__) \
 			FOREACH_NO_INTERVAL(Overload_S, __VA_ARGS__) \
 			FOREACH_NO_INTERVAL(Overload_T, __VA_ARGS__) \
+			FOREACH_NO_INTERVAL(Overload_F, __VA_ARGS__) \
 			else return Interface_detail::no_matching_function(); \
 		} \
 	protected: \
@@ -119,6 +127,15 @@ struct remove_const_keep_ref<T&&> {
 template<typename T>
 using remove_const_keep_ref_t = typename remove_const_keep_ref<T>::type;
 
+template<typename T>
+struct no_transform
+{
+	using type = T;
+};
+
+template<typename T>
+using no_transform_t = typename no_transform<T>::type;
+
 template<typename Tuple, template<typename> class Transformer>
 struct transform_tuple;
 
@@ -134,8 +151,10 @@ struct transform_tuple<std::tuple<>, Transformer> {
 	using type = std::tuple<>;
 };
 
-template<typename Tuple, template<typename> class Transformer>
+template<typename Tuple, template<typename> class Transformer = no_transform>
 using transform_tuple_t = typename transform_tuple<Tuple, Transformer>::type;
+
+
 
 namespace Interface_detail
 {
