@@ -21,20 +21,34 @@ import ANY;
 #define	Gener_Fun_Name(X) (CAT(F_,__COUNTER__), Impl X)
 
 #define F_Overload_0_Impl(name, type_in, type_out) \
-	if constexpr(requires{ name(*this, std::forward<Args>(args)...); } && std::same_as<transform_tuple_t<std::tuple<Impl type_in>>, std::tuple<std::remove_cvref_t<Args>...>>) \
+	if constexpr(requires{ name(*this, std::forward<Args>(args)...); } && std::same_as<transform_tuple_t<std::tuple<Impl type_in>, remove_const_keep_ref>, std::tuple<remove_const_keep_ref_t<Args>...>>) \
 	{ \
 		return name(*this, std::forward<Args>(args)...); \
 	}
 #define F_Overload_0(args) Impl(F_Overload_0_Impl args)
 #define F_Overload_1_Impl(name, type_in, type_out) \
-	else if constexpr(requires{ name(*this, std::forward<Args>(args)...); } && std::same_as<transform_tuple_t<std::tuple<Impl type_in>>, std::tuple<std::remove_cvref_t<Args>...>>) \
+	else if constexpr(requires{ name(*this, std::forward<Args>(args)...); } && std::same_as<transform_tuple_t<std::tuple<Impl type_in>, remove_const_keep_ref>, std::tuple<remove_const_keep_ref<Args>...>>) \
 	{ \
 		return name(*this, std::forward<Args>(args)...); \
 	}
 #define F_Overload_1(args) Impl(F_Overload_1_Impl args)
 #define Overload_0(x, ...) F_Overload_0(x) FOREACH_NO_INTERVAL(F_Overload_1, __VA_ARGS__)
 #define Overload_1(x, ...) F_Overload_0(x) 
-#define Overload(x, ...) CAT(Overload_, IS_EMPTY(__VA_ARGS__)) (x, __VA_ARGS__)
+#define Overload(x, ...) CAT(Overload_, IS_EMPTY(__VA_ARGS__)) (x, __VA_ARGS__) //第一轮重载匹配，保证左右值
+
+#define Overload_S_Impl(name, typein, typeout) \
+	else if constexpr(requires{ name(*this, std::forward<Args>(args)...); } && std::same_as<transform_tuple_t<std::tuple<Impl typein>, std::remove_cvref>, std::tuple<std::remove_cvref_t<Args>...>>) \
+	{ \
+		return name(*this, std::forward<Args>(args)...); \
+	}
+#define Overload_S(args) Impl(Overload_S_Impl args) //第二轮重载匹配，保证无类型转换
+
+#define Overload_T_Impl(name, typein, typeout) \
+	else if constexpr(requires{ name(*this, std::forward<Args>(args)...); }) \
+	{ \
+		return name(*this, std::forward<Args>(args)...); \
+	}
+#define Overload_T(args) Impl(Overload_T_Impl args) //第三轮重载匹配，允许类型转换
 
 #define Interface_Impl(Fun_name, ...) \
 namespace Interface_detail \
@@ -58,6 +72,9 @@ namespace Interface_detail \
 		auto Fun_name(Args&& ...args) \
 		{ \
 			Overload(__VA_ARGS__) \
+			FOREACH_NO_INTERVAL(Overload_S, __VA_ARGS__) \
+			FOREACH_NO_INTERVAL(Overload_T, __VA_ARGS__) \
+			else return Interface_detail::no_matching_function(); \
 		} \
 	protected: \
 		virtual ~Interface_##Fun_name() {} \
@@ -79,23 +96,48 @@ struct class_name final: FOREACH(Inter_name, __VA_ARGS__) \
 
 #define Fn(X,Y) (X, Y)
 
-// 定义transform_tuple，用于处理std::tuple
-template<typename Tuple>
+
+// 基本定义：对于非引用类型，直接移除 const 修饰符。
+template<typename T>
+struct remove_const_keep_ref {
+    using type = typename std::remove_const<T>::type;
+};
+
+// 针对左值引用类型的特化：先移除引用，处理 const 后，再添加回引用。
+template<typename T>
+struct remove_const_keep_ref<T&> {
+    using type = typename std::remove_const<T>::type&;
+};
+
+// 针对右值引用类型的特化：先移除引用，处理 const 后，再添加回右值引用。
+template<typename T>
+struct remove_const_keep_ref<T&&> {
+    using type = typename std::remove_const<T>::type&&;
+};
+
+// 便捷使用的别名模板
+template<typename T>
+using remove_const_keep_ref_t = typename remove_const_keep_ref<T>::type;
+
+template<typename Tuple, template<typename> class Transformer>
 struct transform_tuple;
 
 // 部分特化，用于非空的std::tuple
-template<typename... Args>
-struct transform_tuple<std::tuple<Args...>> 
-{
-	using type = std::tuple<std::remove_cvref_t<Args>...>;
+template<template<typename> class Transformer, typename... Args>
+struct transform_tuple<std::tuple<Args...>, Transformer> {
+	using type = std::tuple<typename Transformer<Args>::type...>;
 };
 
 // 完全特化，用于空的std::tuple
-template<>
-struct transform_tuple<std::tuple<>> 
-{
+template<template<typename> class Transformer>
+struct transform_tuple<std::tuple<>, Transformer> {
 	using type = std::tuple<>;
 };
 
-template<typename Tuple>
-using transform_tuple_t = typename transform_tuple<Tuple>::type;
+template<typename Tuple, template<typename> class Transformer>
+using transform_tuple_t = typename transform_tuple<Tuple, Transformer>::type;
+
+namespace Interface_detail
+{
+	void no_matching_function() = delete;//匹配失败
+}
