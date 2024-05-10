@@ -23,8 +23,16 @@ template<typename T>
 struct derived final : base
 {
     T value;
-    derived(T&& value) : value(std::forward<T>(value)) ,type(&typeid(std::decay_t<T>)) {}
-    derived(const T& value) : value(value), type(&typeid(std::decay_t<T>)) {}
+    derived(T&& value) : 
+        value(std::forward<T>(value)) 
+    {
+        type = &typeid(std::decay_t<T>);
+    }
+    derived(const T& value) : 
+        value(value)
+    {
+        type = &typeid(std::decay_t<T>);
+    }
     void* to_void_ptr() const& noexcept override
     {
         return reinterpret_cast<void*>(const_cast<T*>(&value));
