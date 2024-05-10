@@ -58,7 +58,7 @@ Interface(Myclass,
 + Due to the limitations of the macro recursion stack, the maximum size of the overload set for a single function is 32, and the maximum size of the funvtion set for a Interface is 32 too.
 + Due to some limitations, ",""[]" and all binary operators are temporarily unreloaded and are waiting to be updated in the future.
 
-### Implementing and Using MetaClasses
+### Implementing and Using Inteface
 1.**Define Interface**
 ```cpp
 Interface(Myclass,
