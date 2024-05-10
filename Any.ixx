@@ -13,6 +13,7 @@ export enum class OwnerShip
 
 struct base
 {
+    const std::type_info* type = &typeid(void*);
     virtual void* to_void_ptr() const& noexcept = 0;
     virtual base* clone() const& = 0;
     virtual ~base() = default;
@@ -22,8 +23,8 @@ template<typename T>
 struct derived final : base
 {
     T value;
-    derived(T&& value) : value(std::forward<T>(value)) {}
-    derived(const T& value) : value(value) {}
+    derived(T&& value) : value(std::forward<T>(value)) ,type(&typeid(std::decay_t<T>)) {}
+    derived(const T& value) : value(value), type(&typeid(std::decay_t<T>)) {}
     void* to_void_ptr() const& noexcept override
     {
         return reinterpret_cast<void*>(const_cast<T*>(&value));
@@ -103,24 +104,32 @@ struct Any<OwnerShip::Owner>//这个Any管理内存，有所有权
         return content ? content->to_void_ptr() : nullptr;
     }
     template <typename T>
-    friend std::decay_t<T>& as(Any<OwnerShip::Owner>& self) noexcept//self为左值就拷贝，右值就移动
+    friend std::decay_t<T>& as(Any<OwnerShip::Owner>& self)
     {
         using NonRef = std::decay_t<T>;
+        if(self.content->type != &typeid(NonRef))
+			throw std::bad_cast();
         return static_cast<derived<NonRef>*>(self.content)->value;
     }
     template<typename T>
-    friend std::decay_t<T> as(Any<OwnerShip::Owner>&& self) noexcept
+    friend std::decay_t<T> as(Any<OwnerShip::Owner>&& self)
     {
         using NonRef = std::decay_t<T>;
+        if (self.content->type != &typeid(NonRef))
+            throw std::bad_cast();
         auto& temp = static_cast<derived<NonRef>*>(self.content)->value;
+        self.content->type = &typeid(void*);
         self.content = nullptr;
         return temp;
     }
     ~Any()
     {
         if (content)
+        {
+            content->type = &typeid(void*);
             delete content;
-        content = nullptr;
+            content = nullptr;
+        }
     }
 };
 
@@ -156,12 +165,6 @@ struct Any<OwnerShip::Observer>//这个Any不管理内存，只是一个类型�
     explicit operator void* () const noexcept
     {
         return content;
-    }
-    template<typename T>
-    friend std::decay_t<T>& as(Any<OwnerShip::Observer>& any)
-    {
-        using NonRef = std::decay_t<T>;// 确保我们处理T类型而不是T&（引用类型）
-        return *static_cast<NonRef*>(any.content);
     }
     ~Any() {};
 };
