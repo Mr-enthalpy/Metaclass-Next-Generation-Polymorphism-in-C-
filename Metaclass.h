@@ -1,6 +1,5 @@
 #include "For_marco.h"
 #include <type_traits>
-#include <tuple>
 import ANY;
 
 #define List_push_back(x, ...) CAT(List_pusk_back_, IS_EMPTY(__VA_ARGS__)) (x, __VA_ARGS__)
@@ -8,155 +7,224 @@ import ANY;
 #define List_pusk_back_1(x, ...) Impl x
 
 #define Expand(...) __VA_ARGS__
-// 辅助宏，用于强制参数展开
-#define F_Declare_Impl(name, type_in, type_out) \
-    using CAT(name, _type) = type_out(List_push_back((Any&), Expand type_in)); \
-    CAT(name, _type)* name = nullptr;
-#define F_Declare(args) Impl(F_Declare_Impl args)
 
-#define F_Init_Impl(name, type_in, type_out) \
-	name(& Call<List_push_back((T), Expand type_in)>)
-#define F_Init(args) Impl(F_Init_Impl args)
+#define Expand_In_List_0_Impl(type, name) type name
+#define Expand_In_List_0(...) Expand_In_List_0_Impl __VA_ARGS__
+#define Expand_In_List_1(...)
+#define Expand_In_List(...) CAT(Expand_In_List_, IS_EMPTY(__VA_ARGS__)) (__VA_ARGS__)
 
-#define	Gener_Fun_Name(X) (CAT(F_,__COUNTER__), Impl X)
+#define Expand_Args_List_0_Impl(type, name) std::forward<decltype(name)>(name)
+#define Expand_Args_List_0(...) Expand_Args_List_0_Impl __VA_ARGS__
+#define Expand_Args_List_1(...)
+#define Expand_Args_List(...) CAT(Expand_Args_List_, IS_EMPTY(__VA_ARGS__)) (__VA_ARGS__)
 
-#define F_Overload_0_Impl(name, type_in, type_out) \
-	if constexpr(requires{ name(*this, std::forward<Args>(args)...); } && std::same_as<transform_tuple_t<std::tuple<Impl type_in>>, std::tuple<Args...>>) \
+#define F_Extend(x, name) (Impl name, CAT(F_,__COUNTER__), Impl x)
+#define Fn_Impl(True_Name, Inside_Name, ...) \
+	((template<typename T, typename ...Args> \
+	static auto Inside_Name(void* self, Args ...args) \
 	{ \
-		return name(*this, std::forward<Args>(args)...); \
-	}
-#define F_Overload_0(args) Impl(F_Overload_0_Impl args)
-#define F_Overload_1_Impl(name, type_in, type_out) \
-	else if constexpr(requires{ name(*this, std::forward<Args>(args)...); } && std::same_as<transform_tuple_t<std::tuple<Impl type_in>>, std::tuple<Args...>>) \
-	{ \
-		return name(*this, std::forward<Args>(args)...); \
-	}
-#define F_Overload_1(args) Impl(F_Overload_1_Impl args)
-#define Overload_0(x, ...) F_Overload_0(x) FOREACH_NO_INTERVAL(F_Overload_1, __VA_ARGS__)
-#define Overload_1(x, ...) F_Overload_0(x) 
-#define Overload(x, ...) CAT(Overload_, IS_EMPTY(__VA_ARGS__)) (x, __VA_ARGS__) //第一轮重载匹配，要求参数类型完全匹配
+		return (*static_cast<std::decay_t<T>*>(self)).True_Name(std::forward<Args>(args)...); \
+	} \
+	template<typename ...Args> \
+	auto True_Name() const;), \
+    (FOREACH_ADD(F_Extend, (Inside_Name, True_Name), __VA_ARGS__)))
+#define Fn(F_Name, ...) Fn_Impl(F_Name, CAT(F_Name,__COUNTER__), __VA_ARGS__)
 
-#define Overload_S_Impl(name, typein, typeout) \
-	else if constexpr(requires{ name(*this, std::forward<Args>(args)...); } && std::same_as<transform_tuple_t<std::tuple<Impl typein>, remove_const_keep_ref>, std::tuple<remove_const_keep_ref_t<Args>...>>) \
+#define Oper_Impl(oper, name, ...) \
+	((template<typename T, typename Arg> \
+	static auto name(void* self, Arg arg) \
 	{ \
-		return name(*this, std::forward<Args>(args)...); \
-	}
-#define Overload_S(args) Impl(Overload_S_Impl args) //第三轮重载匹配，放松条件至允许常量绑定到变量
+		return (*static_cast<std::decay_t<T>*>(self)) oper arg; \
+	} \
+	template<typename Arg> \
+	auto operator oper() const;), \
+	(FOREACH_ADD(F_Extend, (name, operator oper), __VA_ARGS__)))
+#define Oper(oper, ...) Oper_Impl(oper, CAT(operator_,__COUNTER__), __VA_ARGS__)
 
-#define Overload_T_Impl(name, typein, typeout) \
-	else if constexpr(requires{ name(*this, std::forward<Args>(args)...); } && std::same_as<transform_tuple_t<std::tuple<Impl typein>, std::remove_cvref>, std::tuple<std::remove_cvref_t<Args>...>>) \
+#define Paren_Impl(name, ...) \
+	((template<typename T, typename ...Args> \
+	static auto name(void* self, Args ...args) \
 	{ \
-		return name(*this, std::forward<Args>(args)...); \
-	}
-#define Overload_T(args) Impl(Overload_T_Impl args) //第三轮重载匹配，继续放松条件至允许T&&和T转发至T
+		return (*static_cast<std::decay_t<T>*>(self))(std::forward<Args>(args)...); \
+	} \
+	template<typename ...Args> \
+	auto operator()() const; ),\
+	(FOREACH_ADD(F_Extend, (name, operator()), __VA_ARGS__)))
+#define Paren(...) Paren_Impl(CAT(operator_,__COUNTER__), __VA_ARGS__)
 
-#define Overload_F_Impl(name, typein, typeout) \
-	else if constexpr(requires{ name(*this, std::forward<Args>(args)...); }) \
+#define Bracket_Impl(name, ...) \
+	((template<typename T, typename ...Args> \
+	static auto name(void* self, Args ...args) \
 	{ \
-		return name(*this, std::forward<Args>(args)...); \
-	}
-#define Overload_F(args) Impl(Overload_F_Impl args) //第四轮重载匹配，继续放松条件至允许隐式类型转换
+		return(*static_cast<std::decay_t<T>*>(self))[std::forward<Args>(args)...]; \
+	} \
+	template<typename ...Args> \
+	auto operator[]() const;), \
+	(FOREACH_ADD(F_Extend, (name, operator[]), __VA_ARGS__)))
+#define Bracket(...) Bracket_Impl(CAT(operator_,__COUNTER__), __VA_ARGS__)
 
-#define Interface_Impl(Fun_name, ...) \
-namespace Interface_detail \
+#define Gener_Warpper_Impl(warpper, override_set) Impl warpper
+#define Gener_Warpper(X) Gener_Warpper_Impl X
+
+#define Declare_Impl(inside_name, true_name, f_ptr, type_in, type_out) \
+    using CAT(f_ptr, _type) = type_out(List_push_back((void*), Expand type_in)); \
+    CAT(f_ptr, _type)* f_ptr = nullptr;
+#define Declare(args, x) Declare_Impl args
+#define Gener_Delcare_Impl(warpper, override_set) FOREACH_ADD_NOINTERVAL(Declare, x, Impl override_set)
+#define Gener_Delcare(X) Gener_Delcare_Impl X
+
+#define Init_Impl(inside_name, true_name, f_ptr, type_in, type_out) f_ptr(& inside_name<List_push_back((std::decay_t<T>), Expand type_in)>)
+#define Init(args, x) Init_Impl args
+#define Gener_Init_Impl(warpper, override_set) FOREACH_ADD(Init, x, Impl override_set)
+#define Gener_Init(x) Gener_Init_Impl x
+
+#define Invoke_Impl(inside_name, true_name, f_ptr, type_in, type_out) \
+	type_out true_name(FOREACH(Expand_In_List, Impl type_in)) \
+	{ \
+		return f_ptr(List_push_back((static_cast<void*>(object)), FOREACH(Expand_Args_List, Impl type_in))); \
+	}
+#define Invoke(ags, x) Invoke_Impl ags
+
+#define Args_Add_0_Impl(type, x) (type, CAT(Arg_, __COUNTER__))
+#define Args_Add_0(...) FOREACH_ADD(Args_Add_0_Impl, x, __VA_ARGS__)
+#define Args_Add_1(...)
+#define Args_Add(...) CAT(Args_Add_, IS_EMPTY(__VA_ARGS__)) (__VA_ARGS__)
+#define Gener_Args_Impl(inside_name, true_name, f_ptr, type_in, type_out) (inside_name, true_name, f_ptr,(Args_Add type_in), type_out)
+#define Gener_Args(x) Gener_Args_Impl x
+#define Gener_Invoke_Impl(warpper, override_set) FOREACH_ADD_NOINTERVAL(Invoke, x, FOREACH(Gener_Args, Impl override_set))
+#define Gener_Invoke(...) Gener_Invoke_Impl __VA_ARGS__
+
+#define Copy_Impl(inside_name, true_name, f_ptr, type_in, type_out) f_ptr(other.f_ptr)
+#define Copy(x, y) Copy_Impl x 
+#define Copy_ptr_Impl(warpper, override_set) FOREACH_ADD(Copy, x, Impl override_set)
+#define Copy_Ptr(x) Copy_ptr_Impl x
+
+#define Assign_Copy_Impl(inside_name, true_name, f_ptr, type_in, type_out) f_ptr = other.f_ptr
+#define Assign_Copy(x, y) Assign_Copy_Impl x 
+#define Assign_Copy_ptr_Impl(warpper, override_set) FOREACH_ADD(Assign_Copy, x, Impl override_set)
+#define Assign_Copy_Ptr(x) Assign_Copy_ptr_Impl x
+
+#define Assign_Init_Impl(inside_name, true_name, f_ptr, type_in, type_out) f_ptr = &inside_name<List_push_back((std::decay_t<T>), Expand type_in)>
+#define Assign_Init(x, y) Assign_Init_Impl x 
+#define Assign_Init_Ptr_Impl(warpper, override_set) FOREACH_ADD(Assign_Init, x, Impl override_set)
+#define Assign_Init_Ptr(x) Assign_Init_Ptr_Impl x
+
+#define Reflect_Impl(inside_name, true_name, f_ptr, type_in, type_out) \
+	template<> \
+	auto true_name<Impl type_in>() const \
+	{ \
+		return f_ptr; \
+	}
+#define Reflect(args, x) Reflect_Impl args
+#define Gener_Reflect_Impl(warpper, override_set) FOREACH_ADD_NOINTERVAL(Reflect, x, Impl override_set)
+#define Gener_Reflect(X) Gener_Reflect_Impl X
+
+#define Ptr_Impl(inside_name, true_name, f_ptr, type_in, type_out) f_ptr(other.true_name<Impl type_in>())
+#define Ptr(x, y) Ptr_Impl x
+#define Reflect_Ptr_Impl(warpper, override_set) FOREACH_ADD(Ptr, x, Impl override_set)
+#define Reflect_Ptr(X) Reflect_Ptr_Impl X
+
+#define Assign_Ptr_Impl(inside_name, true_name, f_ptr, type_in, type_out) f_ptr = other.true_name<Impl type_in>()
+#define Assign_Ptr(x, y) Assign_Ptr_Impl x
+#define Assign_Reflect_Ptr_Impl(warpper, override_set) FOREACH_ADD(Assign_Ptr, x, Impl override_set)
+#define Assign_Reflect_Ptr(X) Assign_Reflect_Ptr_Impl X
+
+#define Interface(intername, ...) \
+template <OwnerShip ownership> \
+struct intername; \
+\
+template <> \
+struct intername<OwnerShip::Owner> \
 { \
-	struct Interface_##Fun_name : virtual public Any \
+private: \
+	using any = Any<OwnerShip::Owner>; \
+	using swift = Any<OwnerShip::Owner>; \
+	any object; \
+    FOREACH_NOINTERVAL(Gener_Delcare, __VA_ARGS__) \
+	friend struct intername<OwnerShip::Observer>; \
+public: \
+	FOREACH_NOINTERVAL(Gener_Warpper, __VA_ARGS__) \
+	intername() = default; \
+	template <typename T> \
+		requires (!is_observer<T>) && (!is_owner<T>) \
+	intername(T&& x) : object(std::forward<decltype(x)>(x)), FOREACH(Gener_Init, __VA_ARGS__) {} \
+	intername(const intername& other) = default; \
+	intername(intername&& other) = default; \
+	template<typename T> \
+		requires is_owner<T> && (!std::is_same_v<std::remove_cvref_t<T>, intername<OwnerShip::Owner>>) \
+	intername(T&& other) : object(std::forward<decltype(other.object)>(other.object)), FOREACH(Reflect_Ptr, __VA_ARGS__) {} \
+	intername& operator=(const intername& other) = default; \
+	intername& operator=(intername&& other) = default; \
+	template<typename T> \
+		requires (!is_interface<T>) \
+	intername& operator=(T&& other) \
 	{ \
-	private: \
-		FOREACH_NO_INTERVAL(F_Declare, __VA_ARGS__) \
-		template<typename T, typename ...Args> \
-		static auto Call(Any& self, Args ...args) \
-		{ \
-			return Any_cast<T&>(self).Fun_name(std::forward<Args>(args)...); \
-		}; \
-	public: \
-		Interface_##Fun_name() = default; \
-		template<typename T> \
-		Interface_##Fun_name(T& x) : Any(x), FOREACH(F_Init, __VA_ARGS__) {} \
-		Interface_##Fun_name(const Interface_##Fun_name& other) = default; \
-		Interface_##Fun_name& operator=(const Interface_##Fun_name& other) = default; \
-		template <typename ...Args> \
-		auto Fun_name(Args&& ...args) \
-		{ \
-			Overload(__VA_ARGS__) \
-			FOREACH_NO_INTERVAL(Overload_S, __VA_ARGS__) \
-			FOREACH_NO_INTERVAL(Overload_T, __VA_ARGS__) \
-			FOREACH_NO_INTERVAL(Overload_F, __VA_ARGS__) \
-			else return Interface_detail::no_matching_function(); \
-		} \
-	protected: \
-		virtual ~Interface_##Fun_name() {} \
-	}; \
-};
-#define Interface(Fun_name, ...) Interface_Impl(Fun_name, FOREACH(Gener_Fun_Name, __VA_ARGS__))
-
-#define Make_X(X) Interface_##X(x)
-#define Inter_name(X) Interface_detail::Interface_##X
-#define Metaclass(class_name, ...) \
-struct class_name final: FOREACH(Inter_name, __VA_ARGS__) \
+		object = std::forward<decltype(other)>(other), \
+		FOREACH(Assign_Init_Ptr, __VA_ARGS__); \
+		return *this; \
+	} \
+	template<typename T> \
+		requires is_owner<T> && (!std::is_same_v<std::remove_cvref_t<T>, intername<OwnerShip::Owner>>) \
+	intername& operator=(T&& other) \
+	{ \
+		object = std::forward<decltype(other.object)>(other.object), \
+		FOREACH(Assign_Reflect_Ptr, __VA_ARGS__); \
+		return *this; \
+	} \
+	FOREACH_NOINTERVAL(Gener_Invoke, __VA_ARGS__) \
+	FOREACH_NOINTERVAL(Gener_Reflect, __VA_ARGS__) \
+	~intername() {} \
+};\
+\
+template <> \
+struct intername<OwnerShip::Observer> \
 { \
-    class_name() = default; \
-    class_name(auto& x):  Any(x), FOREACH(Make_X, __VA_ARGS__) {} \
-    class_name(const class_name& other) = default; \
-    class_name& operator=(const class_name& other) = default; \
-    ~ class_name() {} \
+private: \
+	using any = Any<OwnerShip::Observer>; \
+	using swift = Any<OwnerShip::Owner>; \
+	any object; \
+    FOREACH_NOINTERVAL(Gener_Delcare, __VA_ARGS__) \
+public: \
+	FOREACH_NOINTERVAL(Gener_Warpper, __VA_ARGS__) \
+	intername() = default; \
+	template <typename T> \
+		requires (!is_observer<T>) && (!is_owner<T>) \
+	intername(T& x) : object(x), FOREACH(Gener_Init, __VA_ARGS__) {} \
+	template <typename T> \
+		requires std::is_rvalue_reference_v<T&&> \
+	intername(T&& x) = delete; \
+	intername(const intername<OwnerShip::Owner>& other) : object(other.object), FOREACH(Copy_Ptr, __VA_ARGS__) {} \
+    intername(intername<OwnerShip::Owner>&& other) = delete; \
+	intername(const intername& other) = default; \
+	intername(intername&& other) = delete; \
+	template<typename T> \
+		requires (is_observer<T> || is_owner<T>) && (!std::is_same_v<std::remove_cvref_t<T>, intername<OwnerShip::Observer>>) && (!std::is_same_v<std::remove_cvref_t<T>, intername<OwnerShip::Owner>>) \
+	intername(T& other) : object(other.object), FOREACH(Reflect_Ptr, __VA_ARGS__) {} \
+	template<typename T> \
+		requires (!is_interface<T>) \
+	intername& operator=(T& other) \
+	{ \
+		object.content = &other, \
+		FOREACH(Assign_Init_Ptr, __VA_ARGS__); \
+		return *this; \
+	} \
+	template<typename T> \
+		requires (is_observer<T> || is_owner<T>) && (!std::is_same_v<std::remove_cvref_t<T>, intername<OwnerShip::Observer>>) && (!std::is_same_v<std::remove_cvref_t<T>, intername<OwnerShip::Owner>>) \
+	intername& operator=(T& other) \
+	{ \
+		object.content = &other, \
+		FOREACH(Assign_Reflect_Ptr, __VA_ARGS__); \
+		return *this; \
+	} \
+	intername& operator=(const intername<OwnerShip::Owner>& other) \
+	{ \
+		object.content = static_cast<void*>(other.object), \
+		FOREACH(Assign_Copy_Ptr, __VA_ARGS__); \
+		return *this; \
+	} \
+	intername& operator=(const intername& other) = default; \
+	intername& operator=(intername&& other) = delete; \
+	FOREACH_NOINTERVAL(Gener_Invoke, __VA_ARGS__) \
+	FOREACH_NOINTERVAL(Gener_Reflect, __VA_ARGS__) \
+	~intername() {} \
 };
-
-#define Fn(X,Y) (X, Y)
-
-
-// 基本定义：对于非引用类型，直接移除 const 修饰符。
-template<typename T>
-struct remove_const_keep_ref {
-    using type = typename std::remove_const<T>::type;
-};
-
-// 针对左值引用类型的特化：先移除引用，处理 const 后，再添加回引用。
-template<typename T>
-struct remove_const_keep_ref<T&> {
-    using type = typename std::remove_const<T>::type&;
-};
-
-// 针对右值引用类型的特化：先移除引用，处理 const 后，再添加回右值引用。
-template<typename T>
-struct remove_const_keep_ref<T&&> {
-    using type = typename std::remove_const<T>::type&&;
-};
-
-// 便捷使用的别名模板
-template<typename T>
-using remove_const_keep_ref_t = typename remove_const_keep_ref<T>::type;
-
-template<typename T>
-struct no_transform
-{
-	using type = T;
-};
-
-template<typename T>
-using no_transform_t = typename no_transform<T>::type;
-
-template<typename Tuple, template<typename> class Transformer>
-struct transform_tuple;
-
-// 部分特化，用于非空的std::tuple
-template<template<typename> class Transformer, typename... Args>
-struct transform_tuple<std::tuple<Args...>, Transformer> {
-	using type = std::tuple<typename Transformer<Args>::type...>;
-};
-
-// 完全特化，用于空的std::tuple
-template<template<typename> class Transformer>
-struct transform_tuple<std::tuple<>, Transformer> {
-	using type = std::tuple<>;
-};
-
-template<typename Tuple, template<typename> class Transformer = no_transform>
-using transform_tuple_t = typename transform_tuple<Tuple, Transformer>::type;
-
-
-
-namespace Interface_detail
-{
-	void no_matching_function() = delete;//匹配失败
-}
