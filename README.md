@@ -75,44 +75,44 @@ Interface(Myclass,
 +The Interface macro creates two types, Myclass<OwnerShip::Owner> and Myclass<OwnerShip:Observer>, with the former managing memory and the latter not managing memory.
 2. **Implement your class** with the required methods:
 
-    ```cpp
+```cpp
 struct A
 {
-	int Add(int a, int b) { return a + b; }
+    int Add(int a, int b) { return a + b; }
     double Add(double a, double b) { return a + b; }
     string Add(string a, string b) { return a + b; }
     void read() { std::cout << "A" << std::endl; }
     ~A() { std::cout << "~A" << std::endl; }
 };
-    ```
+```
     
 3. **Instantiate and use** your MetaClass:
 
-    ```cpp
-    string str = "str";
-    auto a = new A();
-    auto b = new B();
-    Myclass<OwnerShip::Owner> owner(std::move(*a));
-    std::cout << owner.Add(1, 8) << std::endl;
-    std::cout << owner.Add(1.0,2.1) << std::endl;
-    std::cout << owner.Add(str, str) << std::endl;
-    owner.read();
-    owner = std::move(*b); //a automatic destructuring
-    Myclass<OwnerShip::Observer> obser(owner);
-    std::cout << obser.Add(str, str) << std::endl;
-    std::cout << obser.Add(8, 9) << std::endl;
-    std::cout << obser.Add(1.1, 1.1) << std::endl;
-    obser.read();
-    ```
+```cpp
+string str = "str";
+auto a = new A();
+auto b = new B();
+Myclass<OwnerShip::Owner> owner(std::move(*a));
+std::cout << owner.Add(1, 8) << std::endl;
+std::cout << owner.Add(1.0,2.1) << std::endl;
+std::cout << owner.Add(str, str) << std::endl;
+owner.read();
+owner = std::move(*b); //a automatic destructuring
+Myclass<OwnerShip::Observer> obser(owner);
+std::cout << obser.Add(str, str) << std::endl;
+std::cout << obser.Add(8, 9) << std::endl;
+std::cout << obser.Add(1.1, 1.1) << std::endl;
+obser.read();
+```
 + You can always create an ownerless interface from an owned interface just as efficiently.
 + What is not shown here is that if an interface A is a subset of another interface B, then A can be constructed from interface B just as efficiently.
 4. **Type-Safe Downcasting**:
 
-    ```cpp
-    auto& originalObject = as<A>(owner); // Safe
-    auto  getsource = as<A>(std::move(owner)) // get the source safely
-    auto& wrongCast = as<OtherType>(metaObject); // Compilation error
-    ```
+```cpp
+auto& originalObject = as<A>(owner); // Safe
+auto  getsource = as<A>(std::move(owner)) // get the source safely
+auto& wrongCast = as<OtherType>(metaObject); // Compilation error
+```
 + An ownerless interface can not Downcasting
 ## Contributing
 
