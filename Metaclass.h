@@ -1,5 +1,7 @@
 #include "For_marco.h"
 #include <type_traits>
+#include <typeinfo>
+#include <exception>
 import ANY;
 
 #define List_push_back(x, ...) CAT(List_pusk_back_, IS_EMPTY(__VA_ARGS__)) (x, __VA_ARGS__)
@@ -170,6 +172,18 @@ public: \
 		object = std::forward<decltype(other.object)>(other.object), \
 		FOREACH(Assign_Reflect_Ptr, __VA_ARGS__); \
 		return *this; \
+	} \
+    template <typename T> \
+	friend std::decay_t<T>& as(intername& self) \
+	{ \
+		using NonRef = std::decay_t<T>; \
+		return as<NonRef>(self.object); \
+	} \
+	template<typename T> \
+	friend std::decay_t<T> as(intername<OwnerShip::Owner>&& self) \
+	{ \
+		using NonRef = std::decay_t<T>; \
+		return as<NonRef>(std::move(self.object)); \
 	} \
 	FOREACH_NOINTERVAL(Gener_Invoke, __VA_ARGS__) \
 	FOREACH_NOINTERVAL(Gener_Reflect, __VA_ARGS__) \
