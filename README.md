@@ -9,7 +9,7 @@ MetaClass is a cutting-edge C++ framework aiming to redefine polymorphism within
 - **Non-intrusive Design**: Enables polymorphic behavior without altering object design.
 - **Ease of Use**: Simplifies the declaration and usage of polymorphic classes through macros and template metaprogramming.
 - **Type-Safe Downcasting**: Allows for safe retrieval of the original object with complete type safety.
-- **Reference Semantics Only**： MetaClass inherently adopts reference semantics, viewing it just as an observer, separating annoying lifecycle management from dynamic polymorphism.
+- **Fine-grained memory control**：The interface is available in both owned and non-owned versions, allowing for a higher degree of freedom for in-depth memory control.
 - **Seamless Interaction with the C++ Type System**: MetaClass is designed to work harmoniously with the C++ type system, providing a smooth integration that leverages the full capabilities of the First-order Type.
 - **Intuitive Object.Method(...) Calling Convention**: A standout feature of MetaClass is its support for the Object.Method(args...) calling style, Perfectly imitating the syntax and feel of virtual function-based polymorphism. The ability to use the familiar Object.Method(...) syntax enhances readability and usability, making MetaClass a more natural fit for C++ developers.
 - **Performance Comparable to Static Polymorphism**: MetaClass approaches the performance of static polymorphism solutions like CRTP combined with std::variant, offering a dynamic polymorphism solution without the typical overhead associated with virtual functions.
@@ -28,64 +28,92 @@ Use the header file "Metaclass.h" after including the project：
 #include "Metaclass.h"
 ```
 
-### Defining Interfaces and Metalasses
+### Defining the Interfaces
 
-1. **Define an Interface** using the `Interface` macro:
+**using the `Interface` macro to define an Interface**
 
     ```cpp
-    Interface(Add,
-        Fn((string, string), string),
-        Fn((int, int), int)
-    ); 
-
-    Interface(read,
-        ((), void), 
-    );
+Interface(Myclass,
+    Fn(Add,
+        ((int,int),int),
+		((double,double),double),
+		((string,string),string)
+    ),
+    Fn(read,
+        ((),void)
+    ),
+    Paren(
+        ((int),int),
+		((double),double)
+    ),
+    Oper(+,
+        ((int),int),
+    )
+)
     ```
 + The first parameter defines the name of the interface.
-+ All parameters, starting with the second parameter of the macro, make up the overload set of the interface.
-+ The two parameters in each parameter correspond to the types of input and output parameters.
-+ Fn is not mandatory and can be defaulted。
-+ Due to the limitations of the macro recursion stack, the maximum size of the overload set for a single interface is 1024.
++ The Fn macro is used to create a common function in an interface, the first parameter of Fn is the function name, and the subsequent parameters are the type signature and constitute the overload set of the function.
++ The Paren macro is used to create the operator() function in the interface, and all the parameters in Paren are also type-signes and form the overload set of the function.
++ The Oper macro is used to create additional overloaded operators in the interface, where all parameters are also type-signes and form the overload set of the function.
++ Due to the limitations of the macro recursion stack, the maximum size of the overload set for a single function is 32, and the maximum size of the funvtion set for a Interface is 32 too.
++ Due to some limitations, ",""[]" and all binary operators are temporarily unreloaded and are waiting to be updated in the future.
 
-2. **Create a MetaClass** using the `Metaclass` macro::
-
-    ```cpp
-    Metaclass(Myclass, Add, read);
-    ```
-+ The first parameter defines the name of the Metaclass.
-+ The parameters starting with the second parameter define the set of interfaces that the metaclass contains.
-+ Due to the limitations of the macro recursion stack, the maximum size of the interface set for a single metaclass is 1024.
 ### Implementing and Using MetaClasses
-
-1. **Implement your class** with the required methods:
+1.**Define Interface**
+```cpp
+Interface(Myclass,
+    Fn(Add,
+        ((int,int),int),
+		((double,double),double),
+		((string,string),string)
+    ),
+    Fn(read,
+        ((),void)
+    )
+)
+```
++The Interface macro creates two types, Myclass<OwnerShip::Owner> and Myclass<OwnerShip:Observer>, with the former managing memory and the latter not managing memory.
+2. **Implement your class** with the required methods:
 
     ```cpp
-    struct MyClassImpl
-    {
-        int Add(int a, int b) { return a + b; }
-        string Add(string a, string b) { return a + b; }
-        void read() { std::cout << "read" << std::endl; }
-    };
+struct A
+{
+	int Add(int a, int b) { return a + b; }
+    double Add(double a, double b) { return a + b; }
+    string Add(string a, string b) { return a + b; }
+    void read() { std::cout << "A" << std::endl; }
+    ~A() { std::cout << "~A" << std::endl; }
+};
     ```
     
-2. **Instantiate and use** your MetaClass:
+3. **Instantiate and use** your MetaClass:
 
     ```cpp
-    MyClassImpl impl;
-    Myclass metaObject(impl);
-
-    std::cout << metaObject.Add("hello", "world") << std::endl;
-    std::cout << metaObject.Add(2, 3) << std::endl;
-    metaObject.read();
+    string str = "str";
+    auto a = new A();
+    auto b = new B();
+    Myclass<OwnerShip::Owner> owner(std::move(*a));
+    std::cout << owner.Add(1, 8) << std::endl;
+    std::cout << owner.Add(1.0,2.1) << std::endl;
+    std::cout << owner.Add(str, str) << std::endl;
+    owner.read();
+    owner = std::move(*b); //a automatic destructuring
+    Myclass<OwnerShip::Observer> obser(owner);
+    std::cout << obser.Add(str, str) << std::endl;
+    std::cout << obser.Add(8, 9) << std::endl;
+    std::cout << obser.Add(1.1, 1.1) << std::endl;
+    obser.read();
     ```
-+ Since a metaclass is just an observer of the data, it can only be constructed from lvalues.
-3. **Type-Safe Downcasting**:
++ You can always create an ownerless interface from an owned interface just as efficiently.
++ What is not shown here is that if an interface A is a subset of another interface B, then A can be constructed from interface B just as efficiently.
+4. **Type-Safe Downcasting**:
 
     ```cpp
-    auto& originalObject = Any_cast<MyClassImpl>(metaObject); // Safe
-    auto& wrongCast = Any_cast<OtherType>(metaObject); // Compilation error
+    auto& originalObject = as<A>(owner); // Safe
+    auto  getsource = as<A>(std::move(owner)) // get the source safely
+    auto& wrongCast = as<OtherType>(metaObject); // Compilation error
     ```
++ An ownerless interface can not Downcasting
 ## Contributing
 
 Contributions to MetaClass are welcome! Whether it's through submitting bug reports, writing documentation, or contributing code, we value your input and support.
