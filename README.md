@@ -102,7 +102,7 @@ std::cout << obser.Add(8, 9) << std::endl;
 std::cout << obser.Add(1.1, 1.1) << std::endl;
 obser.read();
 ```
-+ You can always create an observer interface from an owner interface just as efficiently.
++ You can always create an observer interface from an owner interface efficiently.
 + What is not shown here is that if an interface A is a subset of another interface B, then A can be constructed from interface B just as efficiently.
 4. **Type-Safe Downcasting**:
 
