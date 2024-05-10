@@ -72,7 +72,7 @@ Interface(Myclass,
     )
 )//The Interface macro creates two types, Myclass<OwnerShip::Owner> and Myclass<OwnerShip::Observer>, with the former managing memory and the latter not managing memory.
 ```
-2. **Implement your class** with the required methods:
+2. **Implement your class with the required methods**:
 
 ```cpp
 struct A
@@ -84,7 +84,7 @@ struct A
     ~A() { std::cout << "~A" << std::endl; }
 };
 ```
-3. **Instantiate and use** your MetaClass:
+3. **Instantiate and use your Interface**:
 
 ```cpp
 string str = "str";
