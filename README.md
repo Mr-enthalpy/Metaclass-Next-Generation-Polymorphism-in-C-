@@ -32,7 +32,7 @@ Use the header file "Metaclass.h" after including the project：
 
 **using the `Interface` macro to define an Interface**
 
-    ```cpp
+```cpp
 Interface(Myclass,
     Fn(Add,
         ((int,int),int),
@@ -50,7 +50,7 @@ Interface(Myclass,
         ((int),int),
     )
 )
-    ```
+```
 + The first parameter defines the name of the interface.
 + The Fn macro is used to create a common function in an interface, the first parameter of Fn is the function name, and the subsequent parameters are the type signature and constitute the overload set of the function.
 + The Paren macro is used to create the operator() function in the interface, and all the parameters in Paren are also type-signes and form the overload set of the function.
