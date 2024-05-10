@@ -36,15 +36,15 @@ Use the header file "Metaclass.h" after including the project：
 Interface(Myclass,
     Fn(Add,
         ((int,int),int),
-		((double,double),double),
-		((string,string),string)
+	((double,double),double),
+	((string,string),string)
     ),
     Fn(read,
         ((),void)
     ),
     Paren(
         ((int),int),
-		((double),double)
+	((double),double)
     ),
     Oper(+,
         ((int),int),
