@@ -83,6 +83,15 @@ struct A
     void read() { std::cout << "A" << std::endl; }
     ~A() { std::cout << "~A" << std::endl; }
 };
+
+struct B
+{
+    int Add(int a, int b) { return a + b; }
+    double Add(double a, double b) { return a + b; }
+    string Add(string a, string b) { return a + b; }
+    void read() { std::cout << "B" << std::endl; }
+    ~B() { std::cout << "~B" << std::endl; }
+};
 ```
 3. **Instantiate and use your Interface**:
 
