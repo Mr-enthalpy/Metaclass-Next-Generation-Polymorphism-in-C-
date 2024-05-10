@@ -9,7 +9,7 @@ MetaClass is a cutting-edge C++ framework aiming to redefine polymorphism within
 - **Non-intrusive Design**: Enables polymorphic behavior without altering object design.
 - **Ease of Use**: Simplifies the declaration and usage of polymorphic classes through macros and template metaprogramming.
 - **Type-Safe Downcasting**: Allows for safe retrieval of the original object with complete type safety.
-- **Fine-grained memory control**：The interface is available in both owned and non-owned versions, allowing for a higher degree of freedom for in-depth memory control.
+- **Fine-grained memory control**：The interface is available in both owner and observer interfaces, allowing for a higher degree of freedom for in-depth memory control.
 - **Seamless Interaction with the C++ Type System**: MetaClass is designed to work harmoniously with the C++ type system, providing a smooth integration that leverages the full capabilities of the First-order Type.
 - **Intuitive Object.Method(...) Calling Convention**: A standout feature of MetaClass is its support for the Object.Method(args...) calling style, Perfectly imitating the syntax and feel of virtual function-based polymorphism. The ability to use the familiar Object.Method(...) syntax enhances readability and usability, making MetaClass a more natural fit for C++ developers.
 - **Performance Comparable to Static Polymorphism**: MetaClass approaches the performance of static polymorphism solutions like CRTP combined with std::variant, offering a dynamic polymorphism solution without the typical overhead associated with virtual functions.
@@ -70,9 +70,8 @@ Interface(Myclass,
     Fn(read,
         ((),void)
     )
-)
+)//The Interface macro creates two types, Myclass<OwnerShip::Owner> and Myclass<OwnerShip::Observer>, with the former managing memory and the latter not managing memory.
 ```
-+The Interface macro creates two types, Myclass<OwnerShip::Owner> and Myclass<OwnerShip:Observer>, with the former managing memory and the latter not managing memory.
 2. **Implement your class** with the required methods:
 
 ```cpp
@@ -85,7 +84,6 @@ struct A
     ~A() { std::cout << "~A" << std::endl; }
 };
 ```
-    
 3. **Instantiate and use** your MetaClass:
 
 ```cpp
@@ -104,7 +102,7 @@ std::cout << obser.Add(8, 9) << std::endl;
 std::cout << obser.Add(1.1, 1.1) << std::endl;
 obser.read();
 ```
-+ You can always create an ownerless interface from an owned interface just as efficiently.
++ You can always create an observer interface from an owner interface just as efficiently.
 + What is not shown here is that if an interface A is a subset of another interface B, then A can be constructed from interface B just as efficiently.
 4. **Type-Safe Downcasting**:
 
@@ -113,7 +111,7 @@ auto& originalObject = as<A>(owner); // Safe
 auto  getsource = as<A>(std::move(owner)) // get the source safely
 auto& wrongCast = as<OtherType>(metaObject); // Compilation error
 ```
-+ An ownerless interface can not Downcasting
++ An observer interface can not downcast.
 ## Contributing
 
 Contributions to MetaClass are welcome! Whether it's through submitting bug reports, writing documentation, or contributing code, we value your input and support.
