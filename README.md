@@ -64,8 +64,8 @@ Interface(Myclass,
 Interface(Myclass,
     Fn(Add,
         ((int,int),int),
-		((double,double),double),
-		((string,string),string)
+	((double,double),double),
+	((string,string),string)
     ),
     Fn(read,
         ((),void)
