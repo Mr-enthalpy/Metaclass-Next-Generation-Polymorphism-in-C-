@@ -131,10 +131,23 @@ struct StringLiteral
 	((template<typename T, typename Arg> \
 	static auto name(void* self, Arg arg) \
 	{ \
-		return (*static_cast<std::decay_t<T>*>(self)) oper arg; \
+        if constexpr(requires{(*static_cast<std::decay_t<T>*>(self)) oper arg;})\
+		    return (*static_cast<std::decay_t<T>*>(self)) oper arg; \
+		else return arg oper (*static_cast<std::decay_t<T>*>(self));\
 	}), \
 	(FOREACH_ADD(F_Extend, (name, operator oper), __VA_ARGS__)))
 #define Oper(oper, ...) Oper_Impl(oper, CAT(operator_,__COUNTER__), __VA_ARGS__)
+
+#define Pre_Oper_Impl(oper, name, ...) \
+	((template<typename T> \
+	static auto name(void* self) \
+	{ \
+        if constexpr(requires{oper(*static_cast<std::decay_t<T>*>(self));})\
+		    return oper(*static_cast<std::decay_t<T>*>(self)); \
+		else return (*static_cast<std::decay_t<T>*>(self))oper;\
+	}), \
+	(FOREACH_ADD(F_Extend, (name, operator oper), __VA_ARGS__)))
+#define Pre_Oper(oper, ...) Pre_Oper_Impl(oper, CAT(operator_,__COUNTER__), __VA_ARGS__)
 
 #define Paren_Impl(name, ...) \
 	((template<typename T, typename ...Args> \
@@ -249,19 +262,30 @@ private:\
     };\
     static std::unordered_map<std::type_index, v_ptr_list> ptr_map;\
     static std::shared_mutex vtableMutex;\
+	template<typename T>\
+    static v_ptr_list* instance(T&& x, std::type_index index) \
+    { \
+        static v_ptr_list fat_ptr = v_ptr_list(std::forward<T>(x)); \
+        return &fat_ptr;\
+    }\
     template<typename T>\
     static v_ptr_list* make_v_ptr(T&& x, std::type_index index)\
     {\
-        std::shared_lock<std::shared_mutex> lock(vtableMutex);\
-        auto it = ptr_map.find(index);\
-        if (it != ptr_map.end())\
+        if constexpr(!has_v_ptr<T>)\
+			return instance(std::forward<T>(x), index);\
+        else \
+        {\
+            std::shared_lock<std::shared_mutex> lock(vtableMutex);\
+            auto it = ptr_map.find(index);\
+            if (it != ptr_map.end())\
+                return &it->second;\
+            lock.unlock();\
+            std::unique_lock<std::shared_mutex> ulock(vtableMutex);\
+            it = ptr_map.find(index);\
+            if (it == ptr_map.end())\
+                return &(ptr_map[index] = v_ptr_list(std::forward<decltype(x)>(x)));\
             return &it->second;\
-        lock.unlock();\
-        std::unique_lock<std::shared_mutex> ulock(vtableMutex);\
-        it = ptr_map.find(index);\
-        if (it == ptr_map.end())\
-            return &(ptr_map[index] = v_ptr_list(std::forward<decltype(x)>(x)));\
-        return &it->second;\
+        }\
     }\
     void* Object()\
     {\
@@ -412,7 +436,15 @@ public:\
 		using Noref = std::decay_t<T>;\
 		if(x.v_ptr->type!=&typeid(Noref))\
 			throw std::bad_cast();\
-		return *static_cast<Noref*>(x.Object());\
+		return *((const Noref*)(x.Object()));\
+	}\
+    template<typename T>\
+    friend auto& as(intername& x)\
+	{\
+		using Noref = std::decay_t<T>;\
+		if(x.v_ptr->type!=&typeid(Noref))\
+			throw std::bad_cast();\
+		return *((Noref*)(x.Object()));\
 	}\
     template<typename T>\
 	friend auto as(intername&& x)\
@@ -420,7 +452,7 @@ public:\
 		using Noref = std::decay_t<T>;\
 		if(x.v_ptr->type!=&typeid(Noref))\
 			throw std::bad_cast();\
-		auto temp = std::move(*static_cast<Noref*>(x.Object()));\
+		auto temp = std::move(*((Noref*)(x.Object())));\
         x.object = nullptr;\
 		x.v_ptr = nullptr;\
 		return temp;\
@@ -520,7 +552,15 @@ public:\
         using Noref = std::decay_t<T>;\
         if(x.v_ptr->type!=&typeid(Noref))\
 			throw std::bad_cast();\
-        return *static_cast<Noref*>(x.Object());\
+        return *((const Noref*)(x.Object()));\
+    }\
+    template<typename T>\
+    friend auto& as(intername& x)\
+    {\
+        using Noref = std::decay_t<T>;\
+        if(x.v_ptr->type!=&typeid(Noref))\
+			throw std::bad_cast();\
+        return *((Noref*)(x.Object()));\
     }\
     template<typename T>\
     friend auto as(intername&& x)\
@@ -528,7 +568,7 @@ public:\
         using Noref = std::decay_t<T>;\
         if(x.v_ptr->type!=&typeid(Noref))\
 			throw std::bad_cast();\
-        auto temp = std::move(*static_cast<Noref*>(x.Object()));\
+        auto temp = std::move(*((Noref*)(x.Object())));\
         x.object = nullptr;\
 		x.v_ptr = nullptr;\
 		return temp;\
