@@ -406,6 +406,25 @@ public:\
     intername& operator=(const intername<OwnerShip::Observer>& other);\
     intername& operator=(intername<OwnerShip::Observer>&& other) noexcept;\
     FOREACH_NOINTERVAL(Gener_Invoke, __VA_ARGS__)\
+    template<typename T>\
+    friend auto& as(const intername& x)\
+	{\
+		using Noref = std::decay_t<T>;\
+		if(x.v_ptr->type!=&typeid(Noref))\
+			throw std::bad_cast();\
+		return *static_cast<Noref*>(x.Object());\
+	}\
+    template<typename T>\
+	friend auto as(intername&& x)\
+	{\
+		using Noref = std::decay_t<T>;\
+		if(x.v_ptr->type!=&typeid(Noref))\
+			throw std::bad_cast();\
+		auto temp = std::move(*static_cast<Noref*>(x.Object()));\
+        x.object = nullptr;\
+		x.v_ptr = nullptr;\
+		return temp;\
+	}\
     ~intername()\
     {\
         if (v_ptr && object)\
@@ -495,7 +514,26 @@ public:\
         requires std::is_rvalue_reference_v<T&&>\
     intername& operator=(T&& other) = delete;\
     FOREACH_NOINTERVAL(Gener_Invoke, __VA_ARGS__)\
-        ~intername()\
+    template<typename T>\
+    friend auto& as(const intername& x)\
+    {\
+        using Noref = std::decay_t<T>;\
+        if(x.v_ptr->type!=&typeid(Noref))\
+			throw std::bad_cast();\
+        return *static_cast<Noref*>(x.Object());\
+    }\
+    template<typename T>\
+    friend auto as(intername&& x)\
+    {\
+        using Noref = std::decay_t<T>;\
+        if(x.v_ptr->type!=&typeid(Noref))\
+			throw std::bad_cast();\
+        auto temp = std::move(*static_cast<Noref*>(x.Object()));\
+        x.object = nullptr;\
+		x.v_ptr = nullptr;\
+		return temp;\
+    }\
+    ~intername()\
     {\
         object = nullptr;\
         v_ptr = nullptr;\
