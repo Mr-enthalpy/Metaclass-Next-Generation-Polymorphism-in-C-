@@ -15,13 +15,13 @@ struct owner {};
 struct observer {};
 static const std::size_t SSOBufferSize = sizeof(void*);
 template < typename T >
-concept has_v_ptr = std::is_base_of_v <is_v_ptr, T>;
+concept has_v_ptr = std::is_base_of_v <is_v_ptr, std::remove_cvref_t<T>>;
 template <typename T>
-concept is_owner = std::is_base_of_v <owner, T>;
+concept is_owner = std::is_base_of_v <owner, std::remove_cvref_t<T>>;
 template <typename T>
-concept is_observer = std::is_base_of_v <observer, T>;
+concept is_observer = std::is_base_of_v <observer, std::remove_cvref_t<T>>;
 template <typename T>
-concept is_interface = std::is_base_of_v <owner, T> || std::is_base_of_v <observer, T>;
+concept is_interface = std::is_base_of_v <owner, std::remove_cvref_t<T>> || std::is_base_of_v <observer, std::remove_cvref_t<T>>;
 template<std::size_t N>
 struct StringLiteral
 {
@@ -265,7 +265,7 @@ private:\
 	template<typename T>\
     static v_ptr_list* instance(T&& x, std::type_index index) \
     { \
-        static v_ptr_list fat_ptr = v_ptr_list(std::forward<T>(x)); \
+        static v_ptr_list fat_ptr = ptr_map[index] = v_ptr_list(std::forward<T>(x)); \
         return &fat_ptr;\
     }\
     template<typename T>\
@@ -436,7 +436,7 @@ public:\
 		using Noref = std::decay_t<T>;\
 		if(x.v_ptr->type!=&typeid(Noref))\
 			throw std::bad_cast();\
-		return *((const Noref*)(x.Object()));\
+		return *((Noref*)(x.Object()));\
 	}\
     template<typename T>\
     friend auto& as(intername& x)\
