@@ -49,14 +49,17 @@ Interface(Myclass,
     Oper(+,
         ((int),int),
     )
+    Pre_Oper(--,
+        ((int),int),
+    )
 )
 ```
 + The first parameter defines the name of the interface.
 + The Fn macro is used to create a common function in an interface, the first parameter of Fn is the function name, and the subsequent parameters are the type signature and constitute the overload set of the function.
 + The Paren macro is used to create the operator() function in the interface, and all the parameters in Paren are also type-signes and form the overload set of the function.
-+ The Oper macro is used to create additional overloaded operators in the interface, where all parameters are also type-signes and form the overload set of the function.
++ The Oper macro and Pre_Oper are used to create additional overloaded operators in the interface, where all parameters are also type-signes and form the overload set of the function.
 + Due to the limitations of the macro recursion stack, the maximum size of the overload set for a single function is 32, and the maximum size of the funvtion set for a Interface is 32 too.
-+ Due to some limitations, ",""[]" and all binary operators are temporarily unreloaded and are waiting to be updated in the future.
++ Due to some limitations, "," is temporarily unreloaded and are waiting to be updated in the future.
 
 ### Implementing and Using Inteface
 1.**Define Interface**
@@ -120,7 +123,6 @@ auto& originalObject = as<A>(owner); // Safe
 auto  getsource = as<A>(std::move(owner)) // get the source safely
 auto& wrongCast = as<OtherType>(metaObject); // Compilation error
 ```
-+ An observer interface can not downcast.
 ## Contributing
 
 Contributions to MetaClass are welcome! Whether it's through submitting bug reports, writing documentation, or contributing code, we value your input and support.
